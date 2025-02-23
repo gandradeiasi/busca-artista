@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Pesquisa de Artistas do Spotify</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .artist {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .artist:hover {
+            background-color: #f5f5f5;
+        }
+
+        #genresList {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Digite o nome de um artista...">
+        <button onclick="searchArtists()">Pesquisar</button>
+    </div>
+    <div id="results"></div>
+    <div id="genresList"></div>
+
+    <script>
+        // Substitua com suas credenciais do Spotify
+        const clientId = '9e5af7d39497426ca68e083d58bdae60';
+        const clientSecret = '2f15b3e1407e40b1aedb9045f56ee0d6';
+
+        let accessToken = '';
+
+        // Função para obter o token de acesso
+        async function getAccessToken() {
+            const response = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+                },
+                body: 'grant_type=client_credentials'
+            });
+
+            const data = await response.json();
+            return data.access_token;
+        }
+
+        // Função principal de pesquisa
+        async function searchArtists() {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (!searchTerm) return;
+
+            try {
+                if (!accessToken) {
+                    accessToken = await getAccessToken();
+                }
+
+                const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchTerm)}&type=artist&limit=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = await response.json();
+                displayResults(data.artists.items);
+            } catch (error) {
+                console.error('Erro na pesquisa:', error);
+            }
+        }
+
+        // Exibe os resultados da pesquisa
+        function displayResults(artists) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            artists.forEach(artist => {
+                const artistDiv = document.createElement('div');
+                artistDiv.className = 'artist';
+                artistDiv.innerHTML = `
+                    <h3>${artist.name}</h3>
+                    <p>Popularidade: ${artist.popularity}</p>
+                `;
+                
+                artistDiv.onclick = () => showGenres(artist);
+                resultsDiv.appendChild(artistDiv);
+            });
+        }
+
+        // Exibe os gêneros musicais do artista
+        function showGenres(artist) {
+            const genresList = document.getElementById('genresList');
+            genresList.innerHTML = `
+                <h2>Gêneros musicais de ${artist.name}:</h2>
+                <ul>
+                    ${artist.genres.map(genre => `<li>${genre}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        // Permitir pesquisa com Enter
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchArtists();
+            }
+        });
+    </script>
+</body>
+</html>
